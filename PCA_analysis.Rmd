@@ -1,0 +1,124 @@
+---
+title: "Práctica 2"
+author: "Miguel Sánchez Cano"
+date: "10/9/2022"
+output:
+  word_document: default
+  pdf_document: default
+  html_document:
+    df_print: paged
+---
+
+Cargamos las librerias FactoMineR y factoextra
+```{r}
+#cargamos las libreias 
+library(FactoMineR)
+library(factoextra)
+```
+
+Cargamos los datos
+```{r}
+#cargamos los datos
+datos<-read.csv2("/Users/miguel/Desktop/Mineria de datos/autos.csv",sep=";",header=T)
+```
+
+Para realizar el PCA, deberemos descartar primero las variables categoricas y quedarnos solo con las numericas. En nuestro caso descartaremos las variables modelo,fabricante,origen y año.
+
+```{r}
+datos = datos[1:155,c(1,3,4,6,10)]
+datos<-na.omit(datos)
+```
+
+## Matriz de correlaciones
+```{r}
+##Correlaciones
+round(cor(datos),2)
+```
+
+A simple vista podemos comprobar que las variables power, weight y mpg estan altamente correladas
+
+
+```{r}
+#Visualización gráfica de las correlaciones
+pairs(datos,col=4)
+library(corrplot)
+corrplot.mixed(cor(datos),tl.col = 1)
+```
+
+
+# a)Análisis de las Componentes Principales
+```{r}
+#2. PCA 
+res.pca = PCA(datos,graph=F)
+res.pca
+```
+
+Autovalores de las componentes principales
+```{r}
+#autovalores
+eig.val = get_eigenvalue(res.pca)  
+eig.val
+mean(eig.val[,1])
+```
+
+
+
+```{r}
+#Visualización gráfica del PCA
+fviz_eig(res.pca,addlabels=T,ylim=c(0,50))
+```
+
+Como podemos ver en el gráfico, prácticamente el 80% de las variables estan explicadas por las dos primeras componentes principales, aun asi, lo más inteligente seria seleccionar las tres primeras componentes ya que la tercera componente explica un 17% de la variabilidad, que es damasiado como para rechazarla. La cuarta y la quinta componente apenas nos aportan información, por lo que no tendria sentido tenerlas en cuenta.
+El principal criterio por el que he escogido las tres primeras componentes es que al haber una pendiente muy pronunciada entre la tercera y la cuarta componente, nos hace saber que a partir de la tercera componente las siguientes nos van a aportar mucha menos información.
+
+
+## Relación entre el PCA y las variables originales
+
+En la representaciones gráficas de la relaciónes entre el PCA y las variables originales utilizaremos solamente las dos primeras componentes pricipales debido a que los graficos en dos dimensiones son más faciles de hacer e interpretar sobre todo. Esto no quita que siga manteniendo la conclusión del apartado  anterior donde lo más inteligente sería seleccionar las tres primeras componentes
+
+```{r}
+var=get_pca_var(res.pca)
+var
+var$cor
+var$coord
+```
+
+
+```{r}
+#representación gráfica 
+corrplot(var$cos2,is.corr=F,col=COL2('PiYG',200),tl.col = "black")
+```
+
+Fijandonos en los gráficos podemos observar como la primera componente explica es su mayoria las variables mpg, power,weight y en menor parte acceleration mientras que la segunda componente explica mayoritariamente las variable price y en menor medida weight.
+
+
+Factor Mine no devuelve directamente la matriz de rotación o autovectores, para calcularlos dividimos las coordenadas entre la raiz del autovalor correspondiente.
+```{r}
+res <- PCA(datos, scale.unit =TRUE, graph = FALSE)
+loadings<-sweep(res$var$coord,2,sqrt(res$eig[1:5,1]),FUN="/")
+#matriz de autovectores
+loadings
+```
+
+
+# b)Biplot 
+```{r}
+fviz_pca_biplot(res.pca,axes=c(2,3), col.var="cos2",repel=T)
+```
+
+Mirando el circulo de correlaciones nos damos cuenta como las variable mpg tiene una correlación total con la primera componente. Las variables weight y power tambien estan correladas con la primera componente principal mientras que acceleration y price estan mas correladas con la segunda.
+Además, podemos ver la relación que existe entre las distintas variables. Por ejemplo,cuanto mayor es el peso y la potencia del automovil, mayor es su consumo por galon de carretera. Y cuanto mayor es el precio, mayor en la aceleración, además de que cuanto más pesa el vehiculo mayor potencia tendrá. 
+
+
+# c)Contribución de las variables a las componentes principales
+```{r}
+round(var$contrib,2)
+corrplot(var$contrib,is.corr=F)
+```
+
+Aunque este gráfico se muy parecido al gráfico anterior, nos muestran cosas distintas. 
+En el gráfico anterior podiamos ver como las componentes principales explicaban en distinto grado cada una de las variables originales, en cambio este plot muestra lo contrario, es decir, como contribuyen las variables a las componentes principales.
+De esta manera, podemos ver como en la primera componente participan mas o menos de manera uniforme las variables mpg, power y weight. Por otro lado, las variables que más contribuyen a la segunda y tercera componente son acceleration y price.
+
+
+
